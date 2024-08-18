@@ -12,14 +12,14 @@ pub fn build(b: *std.Build) void {
 
     const lib = b.addStaticLibrary(.{
         .name = "toml",
-        .root_source_file = .{ .path = "src/toml.zig" },
+        .root_source_file = b.path("src/toml.zig"),
         .optimize = optimize,
         .target = target,
     });
     b.installArtifact(lib);
 
     const main_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/toml.zig" },
+        .root_source_file = b.path("src/toml.zig"),
         .optimize = optimize,
         .target = target,
     });
