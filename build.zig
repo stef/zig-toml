@@ -3,6 +3,13 @@ const Builder = @import("std").build.Builder;
 pub fn build(b: *Builder) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
+    _ = b.addModule("toml", .{
+        .root_source_file = b.path("src/toml.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const lib = b.addStaticLibrary(.{
         .name = "toml",
         .root_source_file = .{ .path = "src/toml.zig" },
