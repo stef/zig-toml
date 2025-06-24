@@ -2,7 +2,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 const fmt = std.fmt;
 
-const DottedIdentifier = std.TailQueue([]const u8);
+const DottedIdentifier = std.DoublyLinkedList([]const u8);
 
 pub const Key = union(enum) {
     None,
