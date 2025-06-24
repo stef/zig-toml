@@ -1,5 +1,5 @@
 .{
-    .name = "zig-toml",
+    .name = .zig_toml,
     .version = "0.1.0",
     .paths = .{
         "build.zig",
