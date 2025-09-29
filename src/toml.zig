@@ -2,7 +2,12 @@ const std = @import("std");
 const assert = std.debug.assert;
 const fmt = std.fmt;
 
-const DottedIdentifier = std.DoublyLinkedList([]const u8);
+const DottedIdentifier = std.DoublyLinkedList;
+
+const DottedIdentifierNode = struct {
+    data: []const u8,
+    node: DottedIdentifier.Node = .{},
+};
 
 pub const Key = union(enum) {
     None,
@@ -13,7 +18,8 @@ pub const Key = union(enum) {
         if (key.* == .DottedIdent) {
             var it = key.DottedIdent;
             while (it.pop()) |node| {
-                allocator.destroy(node);
+                const n: *DottedIdentifierNode = @fieldParentPtr("node", node);
+                allocator.destroy(n);
             }
         }
     }
@@ -55,7 +61,7 @@ pub const Value = union(enum) {
                 for (tables.items) |table| {
                     table.deinit();
                 }
-                tables.deinit(allocator.*);
+                @constCast(&tables).deinit(allocator.*);
             },
             else => {},
         }
@@ -98,7 +104,7 @@ pub const Table = struct {
     }
 
     fn indexIdentifier(ident: DottedIdentifier, index: usize) ?[]const u8 {
-        if (index >= ident.len) {
+        if (index >= ident.len()) {
             return null;
         }
 
@@ -106,7 +112,8 @@ pub const Table = struct {
         var current: []const u8 = undefined;
         var i = index;
         while (it) |node| : (it = node.next) {
-            current = node.data;
+            const n: *DottedIdentifierNode = @fieldParentPtr("node", node);
+            current = n.data;
             if (i == 0) {
                 break;
             }
@@ -130,7 +137,7 @@ pub const Table = struct {
             Key.DottedIdent => |dotted| {
                 var current_table: *Table = self;
                 var index: usize = 0;
-                while (index < dotted.len - 1) : (index += 1) {
+                while (index < dotted.len() - 1) : (index += 1) {
                     if (current_table.keys.get(indexIdentifier(dotted, index).?)) |pair| {
                         if (pair.isManyTables()) {
                             return Self.Error.expected_table_of_one;
@@ -161,13 +168,13 @@ pub const Table = struct {
     pub fn addManyTable(self: *Self, table: *Table) !void {
         if (self.keys.getPtr(table.name)) |pair| {
             if (pair.isManyTables()) {
-                try pair.ManyTables.append(table);
+                try pair.ManyTables.append(self.allocator, table);
             } else {
                 return Self.Error.table_is_one;
             }
         } else {
-            var value = TableArray.init(self.allocator);
-            try value.append(table);
+            var value: TableArray = .{};
+            try value.append(self.allocator,table);
             const old = try self.keys.fetchPut(table.name, Value{ .ManyTables = value });
             // since we already tested if there's a table then this should be unreachable
             if (old) |_| {
@@ -495,16 +502,18 @@ pub const Parser = struct {
                             if (node == dotted.last) {
                                 break;
                             }
-                            if (current_table.keys.get(node.data)) |pair| {
+                            const n: *DottedIdentifierNode = @fieldParentPtr("node", node);
+                            if (current_table.keys.get(n.data)) |pair| {
                                 if (pair.isManyTables()) {
                                     return Parser.Error.malformed_table;
                                 }
                                 current_table = pair.Table;
                             } else {
-                                current_table = try current_table.addNewTable(node.data);
+                                current_table = try current_table.addNewTable(n.data);
                             }
                         }
-                        table_name = dotted.last.?.data;
+                        const tn: *DottedIdentifierNode = @fieldParentPtr("node", dotted.last.?);
+                        table_name = tn.data;
                     },
                 }
 
@@ -613,7 +622,7 @@ pub const Parser = struct {
     }
 
     fn parseArray(self: *Parser) anyerror!Value {
-        var result = DynamicArray.init(self.allocator);
+        var result : DynamicArray = .{};
         var c = self.nextChar();
 
         var has_comma = true;
@@ -626,7 +635,7 @@ pub const Parser = struct {
             c = self.ignoreWhitespace();
 
             const value = try self.parseValue();
-            try result.append(value);
+            try result.append(self.allocator, value);
 
             c = self.ignoreWhitespace();
             if (c == ',') {
@@ -718,10 +727,10 @@ pub const Parser = struct {
         if (c == '.') {
             var dottedResult = try self.parseDottedIdentifier();
 
-            var node = try self.allocator.create(DottedIdentifier.Node);
+            var node = try self.allocator.create(DottedIdentifierNode);
             node.data = keyValue;
 
-            dottedResult.prepend(node);
+            dottedResult.prepend(&node.node);
             return Key{ .DottedIdent = dottedResult };
         } else {
             return Key{ .Ident = keyValue };
@@ -742,10 +751,10 @@ pub const Parser = struct {
                 ident = try self.parseIdentifier();
             }
 
-            var node = try self.allocator.create(DottedIdentifier.Node);
+            var node = try self.allocator.create(DottedIdentifierNode);
             node.data = ident;
 
-            result.append(node);
+            result.append(&node.node);
             c = self.curChar();
         }
 
