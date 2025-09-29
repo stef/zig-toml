@@ -44,7 +44,7 @@ pub const Value = union(enum) {
         switch (self.*) {
             .Array => |*array| {
                 for (array.items) |*item| {
-                    item.deinit();
+                    item.deinit(allocator);
                 }
                 array.deinit(allocator);
             },
