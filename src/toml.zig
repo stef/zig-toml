@@ -91,7 +91,7 @@ pub const Table = struct {
     pub fn deinit(self: *Self) void {
         var it = self.keys.iterator();
         while (it.next()) |node| {
-            node.value_ptr.*.deinit(self.allocator);
+            node.value_ptr.*.deinit(&self.allocator);
         }
         self.keys.deinit();
         self.allocator.destroy(self);
