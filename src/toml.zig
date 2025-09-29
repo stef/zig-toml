@@ -40,22 +40,22 @@ pub const Value = union(enum) {
         return self == .ManyTables;
     }
 
-    pub fn deinit(self: *Value) void {
+    pub fn deinit(self: *Value, allocator: *std.mem.Allocator) void {
         switch (self.*) {
             .Array => |*array| {
                 for (array.items) |*item| {
                     item.deinit();
                 }
-                array.deinit();
+                array.deinit(allocator);
             },
             .Table => |table| {
-                table.deinit();
+                table.deinit(allocator);
             },
             .ManyTables => |tables| {
                 for (tables.items) |table| {
-                    table.deinit();
+                    table.deinit(allocator);
                 }
-                tables.deinit();
+                tables.deinit(allocator);
             },
             else => {},
         }
