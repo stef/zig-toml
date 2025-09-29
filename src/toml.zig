@@ -49,13 +49,13 @@ pub const Value = union(enum) {
                 array.deinit(allocator.*);
             },
             .Table => |table| {
-                table.deinit(allocator);
+                table.deinit();
             },
             .ManyTables => |tables| {
                 for (tables.items) |table| {
-                    table.deinit(allocator);
+                    table.deinit();
                 }
-                tables.deinit(allocator);
+                tables.deinit(allocator.*);
             },
             else => {},
         }
