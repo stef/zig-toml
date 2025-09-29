@@ -46,7 +46,7 @@ pub const Value = union(enum) {
                 for (array.items) |*item| {
                     item.deinit(allocator);
                 }
-                array.deinit(allocator);
+                array.deinit(allocator.*);
             },
             .Table => |table| {
                 table.deinit(allocator);
